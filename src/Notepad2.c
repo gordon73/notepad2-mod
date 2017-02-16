@@ -217,6 +217,7 @@ WCHAR      szCurFile[MAX_PATH+40];
 FILEVARS   fvCurFile;
 BOOL      bModified;
 BOOL      bReadOnly = FALSE;
+BOOL      bLocked = FALSE;
 int       iEncoding;
 int       iOriginalEncoding;
 int       iEOLMode;
@@ -373,6 +374,7 @@ int flagQuietCreate        = 0;
 int flagUseSystemMRU       = 0;
 int flagRelaunchElevated   = 0;
 int flagDisplayHelp        = 0;
+int flagLocked             = 0;
 
 
 
@@ -988,7 +990,7 @@ HWND InitInstance(HINSTANCE hInstance,LPSTR pszCmdLine,int nCmdShow)
     uidsAppTitle = IDS_APPTITLE_PASTEBOARD;
     SetWindowTitle(hwndMain,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
       iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-      IDS_READONLY,bReadOnly,szTitleExcerpt);
+      IDS_READONLY,bReadOnly || bLocked,szTitleExcerpt);
     bLastCopyFromMe = FALSE;
 
     dwLastCopyTime = 0;
@@ -1280,7 +1282,7 @@ LRESULT CALLBACK MainWndProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam)
                 lstrcpyn(szTitleExcerpt,StrEnd(&params->wchData)+1,COUNTOF(szTitleExcerpt));
                 SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
                   iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-                  IDS_READONLY,bReadOnly,szTitleExcerpt);
+                  IDS_READONLY,bReadOnly||bLocked,szTitleExcerpt);
               }
             }
             // reset
@@ -2062,6 +2064,9 @@ void MsgInitMenu(HWND hwnd,WPARAM wParam,LPARAM lParam)
   EnableCmd(hmenu,IDM_FILE_READONLY,i);
   CheckCmd(hmenu,IDM_FILE_READONLY,bReadOnly);
 
+  EnableCmd(hmenu, IDM_FILE_LOCKED, i);
+  CheckCmd(hmenu, IDM_FILE_LOCKED, bLocked);
+
   //EnableCmd(hmenu,IDM_ENCODING_UNICODEREV,!bReadOnly);
   //EnableCmd(hmenu,IDM_ENCODING_UNICODE,!bReadOnly);
   //EnableCmd(hmenu,IDM_ENCODING_UTF8SIGN,!bReadOnly);
@@ -2392,10 +2397,14 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
         SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
           iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-          IDS_READONLY,bReadOnly,szTitleExcerpt);
+          IDS_READONLY,bReadOnly||bLocked,szTitleExcerpt);
       }
       break;
 
+    case IDM_FILE_LOCKED:
+        bLocked = !bLocked;
+        SendMessage(hwndEdit, SCI_SETREADONLY, bLocked, 0);
+        break;
 
     case IDM_FILE_BROWSE:
       {
@@ -2756,7 +2765,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
           SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
             iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-            IDS_READONLY,bReadOnly,szTitleExcerpt);
+            IDS_READONLY,bReadOnly||bLocked,szTitleExcerpt);
         }
       }
       break;
@@ -2810,7 +2819,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
         UpdateStatusbar();
         SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
           iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-          IDS_READONLY,bReadOnly,szTitleExcerpt);
+          IDS_READONLY,bReadOnly||bLocked,szTitleExcerpt);
       }
       break;
 
@@ -4230,7 +4239,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
       lstrcpy(szTitleExcerpt,L"");
       SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
         iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-        IDS_READONLY,bReadOnly,szTitleExcerpt);
+        IDS_READONLY,bReadOnly||bLocked,szTitleExcerpt);
       break;
 
 
@@ -4239,7 +4248,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
       lstrcpy(szTitleExcerpt,L"");
       SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
         iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-        IDS_READONLY,bReadOnly,szTitleExcerpt);
+        IDS_READONLY, bReadOnly || bLocked, szTitleExcerpt);
       break;
 
 
@@ -4248,7 +4257,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
       lstrcpy(szTitleExcerpt,L"");
       SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
         iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-        IDS_READONLY,bReadOnly,szTitleExcerpt);
+        IDS_READONLY, bReadOnly || bLocked, szTitleExcerpt);
       break;
 
 
@@ -4256,7 +4265,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
       EditGetExcerpt(hwndEdit,szTitleExcerpt,COUNTOF(szTitleExcerpt));
       SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
         iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-        IDS_READONLY,bReadOnly,szTitleExcerpt);
+        IDS_READONLY, bReadOnly || bLocked, szTitleExcerpt);
       break;
 
 
@@ -4775,7 +4784,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
       EditGetExcerpt(hwndEdit,szTitleExcerpt,COUNTOF(szTitleExcerpt));
       SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
         iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-        IDS_READONLY,bReadOnly,szTitleExcerpt);
+        IDS_READONLY, bReadOnly || bLocked, szTitleExcerpt);
       break;
 
 
@@ -5318,7 +5327,7 @@ LRESULT MsgNotify(HWND hwnd,WPARAM wParam,LPARAM lParam)
           bModified = FALSE;
           SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
             iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-            IDS_READONLY,bReadOnly,szTitleExcerpt);
+            IDS_READONLY, bReadOnly || bLocked, szTitleExcerpt);
           break;
 
         case SCN_MARGINCLICK:
@@ -5335,7 +5344,7 @@ LRESULT MsgNotify(HWND hwnd,WPARAM wParam,LPARAM lParam)
           bModified = TRUE;
           SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
             iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-            IDS_READONLY,bReadOnly,szTitleExcerpt);
+            IDS_READONLY, bReadOnly || bLocked, szTitleExcerpt);
           break;
       }
       break;
@@ -6271,6 +6280,11 @@ void ParseCommandLine()
           bIsNotepadReplacement = TRUE;
           break;
 
+       // ReadOnly Mode
+        case L'K':
+          flagLocked = 1;
+          break;
+
         case L'?':
           flagDisplayHelp = 1;
           break;
@@ -6389,6 +6403,11 @@ void LoadFlags()
   if (flagUseSystemMRU == 0) {
     if (IniSectionGetInt(pIniSection,L"ShellUseSystemMRU",0))
       flagUseSystemMRU = 2;
+  }
+
+  if (flagLocked == 1)
+  {
+      bLocked = TRUE;
   }
 
   LocalFree(pIniSection);
@@ -6861,7 +6880,7 @@ BOOL FileLoad(BOOL bDontSave,BOOL bNew,BOOL bReload,BOOL bNoEncDetect,LPCWSTR lp
     EditSetNewText(hwndEdit,"",0);
     SetWindowTitle(hwndMain,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
       iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-      IDS_READONLY,bReadOnly,szTitleExcerpt);
+      IDS_READONLY, bReadOnly || bLocked, szTitleExcerpt);
 
     // Terminate file watching
     if (bResetFileWatching)
@@ -6947,13 +6966,14 @@ BOOL FileLoad(BOOL bDontSave,BOOL bNew,BOOL bReload,BOOL bNoEncDetect,LPCWSTR lp
     iOriginalEncoding = iEncoding;
     bModified = FALSE;
     //bReadOnly = FALSE;
+    SendMessage(hwndEdit, SCI_SETREADONLY, bLocked, 0);
     SendMessage(hwndEdit,SCI_SETEOLMODE,iEOLMode,0);
     MRU_AddFile(pFileMRU,szFileName,flagRelativeFileMRU,flagPortableMyDocs);
     if (flagUseSystemMRU == 2)
       SHAddToRecentDocs(SHARD_PATHW,szFileName);
     SetWindowTitle(hwndMain,uidsAppTitle,fIsElevated,IDS_UNTITLED,szFileName,
       iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-      IDS_READONLY,bReadOnly,szTitleExcerpt);
+      IDS_READONLY, bReadOnly || bLocked, szTitleExcerpt);
 
     // Install watching of the current file
     if (!bReload && bResetFileWatching)
@@ -7043,7 +7063,7 @@ BOOL FileSave(BOOL bSaveAlways,BOOL bAsk,BOOL bSaveAs,BOOL bSaveCopy)
     if (bReadOnly) {
       SetWindowTitle(hwndMain,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
         iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-        IDS_READONLY,bReadOnly,szTitleExcerpt);
+        IDS_READONLY, bReadOnly || bLocked, szTitleExcerpt);
       if (MsgBox(MBYESNOWARN,IDS_READONLY_SAVE,szCurFile) == IDYES)
         bSaveAs = TRUE;
       else
@@ -7102,7 +7122,7 @@ BOOL FileSave(BOOL bSaveAlways,BOOL bAsk,BOOL bSaveAs,BOOL bSaveCopy)
         SHAddToRecentDocs(SHARD_PATHW,szCurFile);
       SetWindowTitle(hwndMain,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
         iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
-        IDS_READONLY,bReadOnly,szTitleExcerpt);
+        IDS_READONLY, bReadOnly || bLocked, szTitleExcerpt);
 
       // Install watching of the current file
       if (bSaveAs && bResetFileWatching)
